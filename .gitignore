@@ -1,0 +1,6 @@
+data/*
+!data/.gitkeep
+venv
+src_old
+
+.DS_Store
