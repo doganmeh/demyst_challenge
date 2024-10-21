@@ -6,3 +6,4 @@ Instructions:
 2. source venv/bin/activate
 3. pip install -r requirements.txt
 4. python src/main.py
+5. pytest  # to run tests

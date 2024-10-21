@@ -2,5 +2,6 @@ data/*
 !data/.gitkeep
 venv
 src_old
+__pycache__
 
 .DS_Store

@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 faker_ = Faker()  # initialize faker
 
-NUM_ROWS = 3_000_000
-CHUNK_ROWS = 100_000
-NUM_EXECUTORS = 1
+NUM_ROWS = 300
+CHUNK_ROWS = 100
+NUM_EXECUTORS = 2
 PATH = "data"
 
 
@@ -55,10 +55,10 @@ def concat_csv_files(temp_dir: str, dest_file: str) -> None:
     for source_file in os.listdir(temp_dir):
         if source_file.startswith("part-"):
             if first:
-                command = f"cat {temp_dir}/{source_file} > {dest_file}"  # rewrite file including the header
+                command = f"cat {temp_dir}/{source_file} > {dest_file}"  # rewrite file, including the header
                 first = False
             else:
-                command = f"tail -n +2 -q {temp_dir}/{source_file} >> {dest_file}"  # append skipping the header
+                command = f"tail -n +2 -q {temp_dir}/{source_file} >> {dest_file}"  # append, skipping the header
 
             # to concatenate csv files
             try:
@@ -100,18 +100,19 @@ def anonymize_csv_pyspark(input_file: str, output_file: str) -> None:
     logger.info(f"Finished anonymizing data to {output_file}.csv")
 
 
-# generate rows in a csv file
-# logger.info("Starting CSV generation")
-# try:
-#     generate_csv('people_data.csv')
-# except Exception as e:
-#     logger.error(f"Error generating CSV: {e}")
-# logger.info("CSV generation completed")
+if __name__ == "__main__":
+    # generate rows in a csv file
+    logger.info("Starting CSV generation")
+    try:
+        generate_csv('people_data.csv')
+    except Exception as e:
+        logger.error(f"Error generating CSV: {e}")
+    logger.info("CSV generation completed")
 
-# anonymize the generated csv file
-logger.info("Starting CSV anonymization with PySpark")
-try:
-    anonymize_csv_pyspark('people_data.csv', 'anonymized_people_data')
-except Exception as e:
-    logger.error(f"Error anonymizing CSV: {e}")
-logger.info("CSV anonymization completed")
+    # anonymize the generated csv file
+    logger.info("Starting CSV anonymization with PySpark")
+    try:
+        anonymize_csv_pyspark('people_data.csv', 'anonymized_people_data')
+    except Exception as e:
+        logger.error(f"Error anonymizing CSV: {e}")
+    logger.info("CSV anonymization completed")
