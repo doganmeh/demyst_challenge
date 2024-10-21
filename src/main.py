@@ -2,6 +2,7 @@ import csv
 import os
 import shutil
 import logging
+import subprocess
 
 from faker import Faker
 from pyspark.sql import SparkSession
@@ -13,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 faker_ = Faker()  # initialize faker
 
-NUM_ROWS = 30_000
-CHUNK_ROWS = 10_000
-NUM_EXECUTORS = 2
+NUM_ROWS = 3_000_000
+CHUNK_ROWS = 100_000
+NUM_EXECUTORS = 1
 PATH = "data"
 
 
@@ -49,6 +50,25 @@ def generate_csv(file_name: str) -> None:
     logger.info(f"Finished generating data into {file_name}")
 
 
+def concat_csv_files(temp_dir: str, dest_file: str) -> None:
+    first = True
+    for source_file in os.listdir(temp_dir):
+        if source_file.startswith("part-"):
+            if first:
+                command = f"cat {temp_dir}/{source_file} > {dest_file}"  # rewrite file including the header
+                first = False
+            else:
+                command = f"tail -n +2 -q {temp_dir}/{source_file} >> {dest_file}"  # append skipping the header
+
+            # to concatenate csv files
+            try:
+                subprocess.run(command, shell=True, check=True)
+                logger.info(f"Executed the command successfully: {command}")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Error concatenating part files: {e}")
+    shutil.rmtree(temp_dir)
+
+
 # function to anonymize csv data using hashing with pyspark dataframe
 def anonymize_csv_pyspark(input_file: str, output_file: str) -> None:
     """
@@ -71,24 +91,22 @@ def anonymize_csv_pyspark(input_file: str, output_file: str) -> None:
         .withColumn("address", sha2(df["address"], 256))
 
     # write the anonymized dataframe to a new csv file
-    df_anonymized.write.option("header", "true").csv(f'{PATH}/{output_file}', mode='overwrite')
+    temp_dir = f'{PATH}/{output_file}'
+    df_anonymized.write.option("header", "true").csv(temp_dir, mode='overwrite')
 
     # rename the part file to the desired output file name
-    temp_dir = f'{PATH}/{output_file}'
-    for file_name in os.listdir(temp_dir):
-        if file_name.startswith("part-"):
-            shutil.move(os.path.join(temp_dir, file_name), f'{PATH}/{output_file}.csv')
-    shutil.rmtree(temp_dir)
+    dest_file = f'{PATH}/{output_file}.csv'
+    concat_csv_files(temp_dir, dest_file)
     logger.info(f"Finished anonymizing data to {output_file}.csv")
 
 
 # generate rows in a csv file
-logger.info("Starting CSV generation")
-try:
-    generate_csv('people_data.csv')
-except Exception as e:
-    logger.error(f"Error generating CSV: {e}")
-logger.info("CSV generation completed")
+# logger.info("Starting CSV generation")
+# try:
+#     generate_csv('people_data.csv')
+# except Exception as e:
+#     logger.error(f"Error generating CSV: {e}")
+# logger.info("CSV generation completed")
 
 # anonymize the generated csv file
 logger.info("Starting CSV anonymization with PySpark")
